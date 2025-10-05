@@ -21,6 +21,11 @@ ENV/
 htmlcov/
 *.log
 
+# Build artifacts
+*.spec
+dist/
+build/
+
 # IDE
 .vscode/
 .idea/
