@@ -1,0 +1,20 @@
+[Unit]
+Description=Trend Following Trading Bot
+After=network.target
+
+[Service]
+Type=simple
+User=rsi
+WorkingDirectory=/home/rsi/trend-bot
+ExecStart=/usr/bin/python3 /home/rsi/trend-bot/main.py
+Restart=always
+RestartSec=60
+StandardOutput=append:/home/rsi/trend-bot/logs/systemd.log
+StandardError=append:/home/rsi/trend-bot/logs/systemd.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

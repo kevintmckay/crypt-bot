@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+*.key
+*.pem
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and state
+logs/*.log
+logs/*.json
+logs/*.lock
+logs/*.txt
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,76 @@
+{
+  "name": "Trend Following Bot",
+  "description": "200-day SMA trend-following trading bot",
+  "allowedCommands": [
+    {
+      "command": "python3",
+      "args": ["*"],
+      "description": "Run Python scripts"
+    },
+    {
+      "command": "venv/bin/python",
+      "args": ["*"],
+      "description": "Run Python in virtual environment"
+    },
+    {
+      "command": "venv/bin/pip",
+      "args": ["*"],
+      "description": "Install packages in virtual environment"
+    },
+    {
+      "command": "./setup.sh",
+      "args": [],
+      "description": "Setup virtual environment and dependencies"
+    },
+    {
+      "command": "./validate.sh",
+      "args": [],
+      "description": "Run all validation tests"
+    },
+    {
+      "command": "pytest",
+      "args": ["*"],
+      "description": "Run unit tests"
+    },
+    {
+      "command": "chmod",
+      "args": ["+x", "*"],
+      "description": "Make scripts executable"
+    },
+    {
+      "command": "ls",
+      "args": ["*"],
+      "description": "List files"
+    },
+    {
+      "command": "cat",
+      "args": ["*"],
+      "description": "View files"
+    },
+    {
+      "command": "tail",
+      "args": ["-f", "logs/*"],
+      "description": "View logs"
+    },
+    {
+      "command": "systemctl",
+      "args": ["status", "trend-bot"],
+      "description": "Check service status"
+    }
+  ],
+  "autoApprove": {
+    "read": ["**/*.py", "**/*.json", "**/*.txt", "**/*.md", "**/*.sh", "**/*.env*", "logs/*"],
+    "write": ["**/*.py", "**/*.json", "**/*.txt", "**/*.md", "**/*.sh", ".env"],
+    "bash": [
+      "ls *",
+      "cat logs/*",
+      "tail -f logs/*",
+      "./setup.sh",
+      "./validate.sh",
+      "venv/bin/python *",
+      "venv/bin/pytest *",
+      "chmod +x *.sh",
+      "systemctl status trend-bot"
+    ]
+  }
+}
