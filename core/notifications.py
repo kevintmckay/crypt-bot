@@ -55,13 +55,13 @@ class NotificationManager:
             notification_log_file: Path to notification log file (default: logs/notifications.log)
         """
         # Email configuration
-        self.email_enabled = email_enabled if email_enabled is not None else os.getenv('ALERT_EMAIL_ENABLED', 'false').lower() == 'true'
-        self.smtp_host = smtp_host or os.getenv('SMTP_HOST', 'smtp.gmail.com')
-        self.smtp_port = smtp_port or int(os.getenv('SMTP_PORT', '587'))
+        self.email_enabled = email_enabled if email_enabled is not None else os.getenv('ALERT_EMAIL_ENABLED', 'true').lower() == 'true'
+        self.smtp_host = smtp_host or os.getenv('SMTP_HOST', 'localhost')
+        self.smtp_port = smtp_port or int(os.getenv('SMTP_PORT', '25'))
         self.smtp_user = smtp_user or os.getenv('SMTP_USER', '')
         self.smtp_password = smtp_password or os.getenv('SMTP_PASSWORD', '')
-        self.alert_email_to = alert_email_to or os.getenv('ALERT_EMAIL_TO', '')
-        self.alert_email_from = alert_email_from or os.getenv('ALERT_EMAIL_FROM', self.smtp_user)
+        self.alert_email_to = alert_email_to or os.getenv('ALERT_EMAIL_TO', 'kevintmckay@gmail.com')
+        self.alert_email_from = alert_email_from or os.getenv('ALERT_EMAIL_FROM', 'cryptbot@trader.lan')
 
         # File logging configuration
         self.notification_log_file = notification_log_file or os.getenv('NOTIFICATION_LOG_FILE', 'logs/notifications.log')
@@ -69,12 +69,12 @@ class NotificationManager:
 
         # Validate email configuration if enabled
         if self.email_enabled:
-            if not all([self.smtp_user, self.smtp_password, self.alert_email_to]):
-                logger.warning("Email notifications enabled but missing configuration. Disabling email alerts.")
-                logger.warning("Required: SMTP_USER, SMTP_PASSWORD, ALERT_EMAIL_TO")
+            if not self.alert_email_to:
+                logger.warning("Email notifications enabled but missing ALERT_EMAIL_TO. Disabling email alerts.")
                 self.email_enabled = False
             else:
                 logger.info(f"Email notifications enabled: {self.alert_email_to}")
+                logger.info(f"Using local postfix SMTP relay (no auth required)")
 
     def _setup_notification_log(self):
         """Setup dedicated notification log file."""
@@ -120,10 +120,9 @@ class NotificationManager:
             full_body = f"Alert Level: {level.value}\n\n{body}"
             msg.attach(MIMEText(full_body, 'plain'))
 
-            # Send email
+            # Send email via local postfix (no auth needed)
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
+                # No TLS or auth needed for localhost
                 server.send_message(msg)
 
             logger.info(f"Email notification sent: {subject}")

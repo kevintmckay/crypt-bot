@@ -135,8 +135,18 @@ class CircuitBreaker:
 
     def on_success(self):
         """Reset circuit breaker on successful call."""
-        if self.state != "CLOSED":
+        was_open = self.state != "CLOSED"
+        if was_open:
             self.logger.info(f"Circuit breaker '{self.name}' closing after successful call")
+
+            # Send notification about recovery
+            try:
+                from core.notifications import get_notification_manager
+                notifier = get_notification_manager()
+                notifier.notify_circuit_breaker_reset(self.name)
+            except Exception as e:
+                self.logger.warning(f"Failed to send circuit breaker reset notification: {e}")
+
         self.failure_count = 0
         self.state = "CLOSED"
         self._save_state()
@@ -149,6 +159,14 @@ class CircuitBreaker:
         if self.failure_count >= self.failure_threshold:
             self.state = "OPEN"
             self.logger.warning(f"Circuit breaker '{self.name}' OPENED after {self.failure_count} failures")
+
+            # Send critical notification about circuit breaker trip
+            try:
+                from core.notifications import get_notification_manager
+                notifier = get_notification_manager()
+                notifier.notify_circuit_breaker_tripped(self.name, self.failure_count)
+            except Exception as e:
+                self.logger.warning(f"Failed to send circuit breaker notification: {e}")
 
         self._save_state()
 

@@ -13,6 +13,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from core.reliability import position_lock
+from core.notifications import init_notifications, get_notification_manager
 from strategies.crypto_trend import CryptoTrendStrategy
 from execution.broker import CryptoBrokerClient
 
@@ -50,6 +51,9 @@ class BTCTrendBot:
         # Validate configuration
         if not (0.0 < self.account_allocation <= 1.0):
             raise ValueError(f"ACCOUNT_ALLOCATION must be between 0 and 1, got {self.account_allocation}")
+
+        # Initialize notification system
+        self.notifier = init_notifications()
 
         # Initialize components
         self.strategy = CryptoTrendStrategy(
@@ -183,6 +187,15 @@ class BTCTrendBot:
                 order = self.broker.place_order(self.symbol, 'BUY', qty_to_buy)
                 logger.info(f"Buy order placed: {order.id}")
 
+                # Send trade notification
+                self.notifier.notify_trade_executed(
+                    symbol=self.symbol,
+                    side='BUY',
+                    quantity=qty_to_buy,
+                    price=current_price,
+                    order_id=order.id
+                )
+
                 # Record entry price for stop loss
                 self.strategy.set_entry_price(current_price)
 
@@ -202,6 +215,15 @@ class BTCTrendBot:
                         qty_to_sell
                     )
                     logger.info(f"Sell order placed: {order.id}")
+
+                # Send trade notification
+                self.notifier.notify_trade_executed(
+                    symbol=self.symbol,
+                    side='SELL',
+                    quantity=qty_to_sell,
+                    price=current_price,
+                    order_id=order.id
+                )
 
                 # Clear entry price
                 self.strategy.clear_entry_price()
@@ -237,6 +259,15 @@ class BTCTrendBot:
 
             except Exception as e:
                 logger.error(f"Error in trading cycle: {e}", exc_info=True)
+
+                # Send error notification
+                import traceback
+                self.notifier.notify_error(
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    traceback_info=traceback.format_exc()
+                )
+
                 logger.info("Waiting 1 hour before retry...")
                 time.sleep(3600)  # Wait 1 hour on error
                 continue
@@ -252,6 +283,14 @@ class BTCTrendBot:
             logger.info("Single run complete")
         except Exception as e:
             logger.error(f"Error during execution: {e}", exc_info=True)
+
+            # Send error notification
+            import traceback
+            self.notifier.notify_error(
+                error_type=type(e).__name__,
+                error_message=str(e),
+                traceback_info=traceback.format_exc()
+            )
             raise
 
 
