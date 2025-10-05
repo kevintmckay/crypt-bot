@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from core.reliability import position_lock
 from core.notifications import init_notifications, get_notification_manager
+from core.status_export import export_status
 from strategies.crypto_trend import CryptoTrendStrategy
 from execution.broker import CryptoBrokerClient
 
@@ -84,6 +85,14 @@ class BTCTrendBot:
         logger.info(f"Volatility Threshold: {self.volatility_threshold:.1%}")
         logger.info(f"Paper Trading: {paper}")
         logger.info("=" * 70)
+
+        # Export initial status
+        export_status(
+            symbol=self.symbol,
+            status='running',
+            last_signal='INITIALIZING',
+            circuit_breaker_status='CLOSED'
+        )
 
     def calculate_target_position(self,
                                  account_value: float,
@@ -162,6 +171,16 @@ class BTCTrendBot:
 
             if signal == 'HOLD':
                 logger.info("No rebalancing needed")
+                # Export status even on HOLD
+                export_status(
+                    symbol=self.symbol,
+                    status='running',
+                    current_position=current_qty,
+                    current_price=current_price,
+                    account_value=account_value,
+                    last_signal='HOLD',
+                    circuit_breaker_status='CLOSED'
+                )
                 return
 
             # Calculate target position
@@ -232,13 +251,51 @@ class BTCTrendBot:
             self.strategy.mark_rebalanced(datetime.now())
             logger.info("Rebalance complete")
 
+            # Export final status after trade
+            final_position = self.broker.get_position(self.symbol)
+            final_qty = float(final_position.qty) if final_position else 0.0
+            export_status(
+                symbol=self.symbol,
+                status='running',
+                current_position=final_qty,
+                current_price=current_price,
+                account_value=account_value,
+                last_signal=signal,
+                circuit_breaker_status='CLOSED'
+            )
+
     def run_continuous(self):
         """Run bot continuously, check daily at 12:00 PST"""
         logger.info("Starting continuous operation")
         logger.info("Daily check at 12:00 PST")
 
+        last_heartbeat = time.time()
+        heartbeat_interval = 120  # Export heartbeat every 2 minutes
+
         while True:
             try:
+                # Export heartbeat status every 2 minutes to prevent stale indicator
+                if time.time() - last_heartbeat >= heartbeat_interval:
+                    try:
+                        # Only get account data for heartbeat (get_position causes 404s when no position)
+                        try:
+                            account = self.broker.get_account()
+                            account_value = float(account.equity)
+                        except:
+                            # If broker unavailable, just export basic status
+                            account_value = None
+
+                        export_status(
+                            symbol=self.symbol,
+                            status='running',
+                            account_value=account_value,
+                            last_signal='MONITORING',
+                            circuit_breaker_status='CLOSED'
+                        )
+                        last_heartbeat = time.time()
+                    except Exception as e:
+                        logger.warning(f"Heartbeat status export failed: {e}")
+
                 # Get current time in PST
                 from datetime import timezone, timedelta
                 pst = timezone(timedelta(hours=-8))
@@ -254,11 +311,20 @@ class BTCTrendBot:
                     logger.info("Daily check complete")
                     logger.info("Sleeping for 1 hour...")
                     time.sleep(3600)  # Sleep 1 hour after running
+                    last_heartbeat = time.time()  # Reset heartbeat after rebalance
                 else:
                     logger.debug(f"Not 12:00 PST yet (current: {now.hour:02d}:{now.minute:02d})")
 
             except Exception as e:
                 logger.error(f"Error in trading cycle: {e}", exc_info=True)
+
+                # Export error status
+                export_status(
+                    symbol=self.symbol,
+                    status='error',
+                    last_signal='ERROR',
+                    additional_data={'error': str(e)}
+                )
 
                 # Send error notification
                 import traceback
@@ -270,6 +336,7 @@ class BTCTrendBot:
 
                 logger.info("Waiting 1 hour before retry...")
                 time.sleep(3600)  # Wait 1 hour on error
+                last_heartbeat = time.time()  # Reset heartbeat after error
                 continue
 
             # Check every minute
