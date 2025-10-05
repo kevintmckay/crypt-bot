@@ -1,16 +1,17 @@
 [Unit]
-Description=Trend Following Trading Bot
+Description=BTC Crypto Trend Following Trading Bot
 After=network.target
 
 [Service]
 Type=simple
-User=rsi
-WorkingDirectory=/home/rsi/trend-bot
-ExecStart=/usr/bin/python3 /home/rsi/trend-bot/main.py
+User=cryptbot
+WorkingDirectory=/home/cryptbot/cryptbot
+ExecStart=/home/cryptbot/cryptbot/venv/bin/python /home/cryptbot/cryptbot/main.py
 Restart=always
 RestartSec=60
-StandardOutput=append:/home/rsi/trend-bot/logs/systemd.log
-StandardError=append:/home/rsi/trend-bot/logs/systemd.log
+StandardOutput=append:/home/cryptbot/cryptbot/logs/systemd.log
+StandardError=append:/home/cryptbot/cryptbot/logs/systemd.log
+Environment="PATH=/home/cryptbot/cryptbot/venv/bin:/usr/bin:/bin"
 
 # Security hardening
 NoNewPrivileges=true

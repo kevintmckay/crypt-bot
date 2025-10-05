@@ -211,26 +211,29 @@ class BTCTrendBot:
             logger.info("Rebalance complete")
 
     def run_continuous(self):
-        """Run bot continuously, check daily at 12:00 UTC"""
+        """Run bot continuously, check daily at 12:00 PST"""
         logger.info("Starting continuous operation")
-        logger.info("Daily check at 12:00 UTC")
+        logger.info("Daily check at 12:00 PST")
 
         while True:
             try:
-                now = datetime.utcnow()
+                # Get current time in PST
+                from datetime import timezone, timedelta
+                pst = timezone(timedelta(hours=-8))
+                now = datetime.now(pst)
 
                 logger.info("=" * 70)
-                logger.info(f"Daily Check - {now.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+                logger.info(f"Daily Check - {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
                 logger.info("=" * 70)
 
-                # Run at 12:00 UTC daily
+                # Run at 12:00 PST daily
                 if now.hour == 12 and now.minute < 5:
                     self.execute_rebalance()
                     logger.info("Daily check complete")
                     logger.info("Sleeping for 1 hour...")
                     time.sleep(3600)  # Sleep 1 hour after running
                 else:
-                    logger.debug(f"Not 12:00 UTC yet (current: {now.hour:02d}:{now.minute:02d})")
+                    logger.debug(f"Not 12:00 PST yet (current: {now.hour:02d}:{now.minute:02d})")
 
             except Exception as e:
                 logger.error(f"Error in trading cycle: {e}", exc_info=True)
