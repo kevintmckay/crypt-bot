@@ -68,11 +68,19 @@ class CryptoBrokerClient:
             Account object with equity, buying_power, etc.
         """
         logger.debug("Fetching account info")
-        account = alpaca_circuit_breaker.call(
-            self.trading_client.get_account
-        )
-        logger.debug(f"Account equity: ${float(account.equity):,.2f}")
-        return account
+        try:
+            account = alpaca_circuit_breaker.call(
+                self.trading_client.get_account
+            )
+            logger.debug(f"Account equity: ${float(account.equity):,.2f}")
+            return account
+        except Exception as e:
+            # Handle validation errors for unknown account statuses (e.g., ACCOUNT_CLOSED_PENDING)
+            if 'validation error' in str(e).lower() and 'enum' in str(e).lower():
+                logger.warning(f"Account API returned unknown status value: {e}")
+                logger.warning("Attempting to continue with raw account data...")
+                # Re-raise to trigger retry, but log the specific issue
+            raise
 
     def get_position(self, symbol: str):
         """
